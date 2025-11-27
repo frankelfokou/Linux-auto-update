@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# # Esegue lo script ogni ora
+# 0 * * * * /home/frankel/.personal/Linux-auto-update/auto_updater.sh >> /var/log/auto_updater_cron.log 2>&1
+
+# # Esegue lo script ad ogni riavvio
+# @reboot /home/frankel/.personal/Linux-auto-update/auto_updater.sh >> /var/log/auto_updater_cron.log 2>&1
+
+
 # Interrompe se un comando fallisce
 set -e
 set -o pipefail
