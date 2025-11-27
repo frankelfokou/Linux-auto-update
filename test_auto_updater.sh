@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# # Esegue lo script ogni ora
+# 0 * * * * /home/frankel/.personal/Linux-auto-update/auto_updater.sh
+
+# # Esegue lo script ad ogni riavvio
+# @reboot /home/frankel/.personal/Linux-auto-update/auto_updater.sh
+
 # Interrompe se un comando fallisce
 set -e
 set -o pipefail
@@ -124,7 +130,28 @@ echo "Starting Weekend Maintenance: $(date)"
 
 # --- SYSTEM UPDATES (Root) ---
 echo "--- Running DNF updates (Root) ---"
-dnf updat --refresh -y
+
+# --- CHECK DNF LOCK ---
+# Controlla se DNF è occupato. Aspetta max 60 secondi (6 tentativi da 10s).
+MAX_RETRIES=6
+COUNT=0
+
+while fuser /var/lib/dnf/lock >/dev/null 2>&1; do
+    if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
+        # Messaggio per il log (verrà incluso nella notifica automatica)
+        echo "TIMEOUT ERROR: DNF lock ancora occupato dopo 60 secondi. Aggiornamento interrotto."
+        
+        # Usciamo con errore. Questo attiva il 'trap' che invia la notifica.
+        exit 1
+    fi
+    
+    echo "DNF lock occupato. Attesa rilascio... ($((COUNT+1))/$MAX_RETRIES)"
+    sleep 10
+    ((COUNT++))
+done
+
+dnf update --refresh -y
+
 # || true impedisce il blocco se non c'è nulla da rimuovere
 dnf autoremove -y || true
 dnf clean all
@@ -137,22 +164,18 @@ flatpak uninstall --unused -y || true
 # --- HOMEBREW & USER FLATPAK (User) ---
 echo "--- Running Homebrew and User Flatpak updates (User: $REAL_USER) ---"
 
-# Fix permessi brew se necessario
-if [ -d "/home/linuxbrew/.linuxbrew" ]; then
-    chown -R "$REAL_USER" /home/linuxbrew/.linuxbrew
-fi
-
 # Switch to user
 su - "$REAL_USER" -c "
     set -e
     
-    echo 'User context switched. Current user: $(whoami)'
+    echo \"User context switched. Current user: \$(whoami)\"
 
     # HOMEBREW
     export NONINTERACTIVE=1
     if [ -f /home/linuxbrew/.linuxbrew/bin/brew ]; then
         /home/linuxbrew/.linuxbrew/bin/brew upgrade
         /home/linuxbrew/.linuxbrew/bin/brew autoremove || true
+        /home/linuxbrew/.linuxbrew/bin/brew cleanup --prune=all || true
     fi
 
     # USER FLATPAK
