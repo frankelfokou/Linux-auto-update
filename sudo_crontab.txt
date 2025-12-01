@@ -1,0 +1,5 @@
+# # Esegue lo script ogni ora
+0 * * * * /home/frankel/.bin/auto_updater.sh
+
+# # Esegue lo script ad ogni riavvio
+@reboot /home/frankel/.bin/auto_updater.sh

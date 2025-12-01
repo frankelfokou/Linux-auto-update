@@ -2,12 +2,44 @@
 
 ## Project Overview
 
-This project consists of a sophisticated Bash script designed to automate weekend system maintenance tasks on a Fedora-based Linux machine. It handles system and user-level package updates, error handling, and user notifications. The script is intended to be run as a privileged user (root) via a scheduler like `cron` or a systemd timer.
+Questo progetto consiste in un sofisticato script Bash progettato per automatizzare le attività di manutenzione del sistema durante il fine settimana su una macchina Linux basata su Fedora. Gestisce gli aggiornamenti dei pacchetti a livello di sistema e utente, la gestione degli errori e le notifiche all'utente. Lo script è pensato per essere eseguito come utente privilegiato (root) tramite un pianificatore come `cron` o un timer di systemd.
 
-The repository contains two scripts:
+---
 
-* `auto_updater.sh`: The main production script. It runs silently on weekends, logging all output to a file.
-* `test_auto_updater.sh`: A testing version of the script with `DEBUG_MODE` enabled, which prints all output directly to the terminal for easy debugging.
+## Scripts Inclusi
+
+Il repository contiene due versioni dello script:
+
+*   `auto_updater.sh`: Lo script principale di produzione.
+    *   **Modalità Silenziosa**: Gira in background, registrando tutto l'output su un file di log.
+    *   **Esecuzione nel Weekend**: È configurato per essere eseguito solo il sabato e la domenica.
+    *   **Log**: L'output viene salvato in `/home/frankel/.var/auto_updater/auto_updater.log`.
+
+*   `test_auto_updater.sh`: Una versione di test dello script.
+    *   **Modalità Debug**: Stampa tutto l'output direttamente sul terminale per un facile debug.
+    *   **Esecuzione Immediata**: Il controllo del giorno della settimana è disabilitato, quindi può essere eseguito in qualsiasi giorno.
+
+---
+
+## Installazione e Pianificazione
+
+1.  **Rendi lo script eseguibile**: Copia lo script `auto_updater.sh` in una directory appropriata (es. `/usr/local/bin/` o `/home/frankel/.bin/`) e assicurati che sia eseguibile.
+
+    ```bash
+    sudo cp auto_updater.sh /usr/local/bin/auto_updater
+    sudo chmod +x /usr/local/bin/auto_updater
+    ```
+
+2.  **Pianifica l'esecuzione**: Lo script deve essere eseguito da `root`. Puoi usare `cron` per pianificarne l'esecuzione. Apri la crontab di root con `sudo crontab -e` e aggiungi una delle seguenti righe:
+
+    *   **Per eseguire lo script ogni ora** (lo script stesso si assicurerà di procedere solo una volta al giorno e solo nei weekend):
+        ```cron
+        0 * * * * /usr/local/bin/auto_updater
+        ```
+    *   **Per eseguire lo script a ogni riavvio**:
+        ```cron
+        @reboot /usr/local/bin/auto_updater
+        ```
 
 ---
 
@@ -27,7 +59,7 @@ The repository contains two scripts:
 
 ## Detailed Update Process
 
-The update process is executed in a specific, logical order to ensure proper permissions and separation of concerns between system and user contexts.
+Il processo di aggiornamento viene eseguito in un ordine logico e specifico per garantire le autorizzazioni corrette e la separazione dei contesti tra sistema e utente.
 
 ### 1. Pre-Checks and Setup (Executed as `root`)
 
@@ -36,7 +68,7 @@ The update process is executed in a specific, logical order to ensure proper per
 3. **Directory and Log Setup**: It ensures the logging directory (`/home/frankel/.var/auto_updater`) exists and creates an empty log file for the current run.
 4. **Output Redirection**: If not in debug mode, the script redirects all subsequent `stdout` and `stderr` to the log file.
 5. **Weekend Check**: The production script checks if the current day is a Saturday or Sunday. If not, it exits silently. This check is disabled in the `test_auto_updater.sh` script.
-6. **Daily Run Check**: It checks for the existence of a timestamp file (e.g., `ran_update_2025-11-27`). If the file for the current date is found, the script exits, preventing multiple runs in the same day.
+6. **Daily Run Check**: It checks for the existence of a timestamp file (e.g., `ran_update_2025-12-01`). If the file for the current date is found, the script exits, preventing multiple runs in the same day.
 
 ### 2. System-Level Maintenance (Executed as `root`)
 
@@ -62,6 +94,6 @@ The update process is executed in a specific, logical order to ensure proper per
 
 ### 4. Finalization (Executed as `root`)
 
-1. **Create Timestamp**: Upon successful completion of all previous steps, the script creates the daily timestamp file (e.g., `ran_update_2025-11-27`) to prevent re-execution.
+1. **Create Timestamp**: Upon successful completion of all previous steps, the script creates the daily timestamp file (e.g., `ran_update_2025-12-01`) to prevent re-execution.
 2. **Clean Old Timestamps**: It finds and deletes any timestamp files that are more than 7 days old, keeping the logging directory clean.
 3. **Completion Message**: A final "Maintenance Complete" message is logged, and the script exits successfully.
